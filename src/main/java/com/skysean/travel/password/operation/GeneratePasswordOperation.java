@@ -51,10 +51,10 @@ public class GeneratePasswordOperation implements ApplicationOperation {
 
         int num = MapUtils.getIntValue(paramMap, 'n', DEFAULT_RANDOM_LEN);
         if (num < 1) {
-            throw new ApplicationOperationException("-n value is invalid! please enter a natural number greater than 0");
+            throw new ApplicationOperationException("-n 值是无效的!请输入一个大于0的自然数");
         }
         boolean hasSpecific = paramMap.containsKey('s');
         String password = randomPassword(num, hasSpecific);
-        System.out.println("GeneratePassword: " + password);
+        System.out.println("随机密码: " + password);
     }
 }

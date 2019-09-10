@@ -46,7 +46,8 @@ spring.datasource.driver-class-name=com.mysql.jdbc.Driver
 spring.datasource.url=jdbc:mysql://localhost:3306/password?useSSL=true&useUnicode=true&characterEncoding=UTF-8
 spring.datasource.username=root
 spring.datasource.password=123456
-#aes key，iv
+#aes key,iv
 travel.password.aes.key=travel_password
 travel.password.aes.iv=password_iv
 ```
+

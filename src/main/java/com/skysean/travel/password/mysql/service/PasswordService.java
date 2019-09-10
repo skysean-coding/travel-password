@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import javax.annotation.PostConstruct;
@@ -103,6 +104,14 @@ public class PasswordService {
 
     public void save(Password password){
 
+        CipherText cipherText = buildCipherText(password);
+
+        CipherText saved = cipherTextRepository.save(cipherText);
+
+        cachedPasswords.put(saved.getId(), password);
+    }
+
+    private CipherText buildCipherText(Password password){
         String content = null;
         try {
             content = cipherService.encrypt(JSON.toJSONString(password));
@@ -118,9 +127,8 @@ public class PasswordService {
         CipherText cipherText = new CipherText();
         cipherText.setId(password.getId());
         cipherText.setContent(content);
-        CipherText saved = cipherTextRepository.save(cipherText);
 
-        cachedPasswords.put(saved.getId(), password);
+        return cipherText;
     }
 
     public void recover(List<CipherText> cipherTexts){
@@ -131,5 +139,32 @@ public class PasswordService {
     public void remove(int id){
         cipherTextRepository.deleteById(id);
         cachedPasswords.remove(id);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void batchInsert(List<Password> passwords){
+
+        List<CipherText> cipherTextList = new ArrayList<>();
+        for(Password password : passwords){
+            CipherText cipherText = buildCipherText(password);
+            cipherTextList.add(cipherText);
+        }
+
+        Iterable<CipherText> savedCipherTexts = cipherTextRepository.saveAll(cipherTextList);
+
+        Map<Integer, Password> savedPasswordMap = new HashMap<>();
+        savedCipherTexts.forEach((ct)->{
+            try {
+                String decrypt = cipherService.decrypt(ct.getContent());
+                Password password = JSON.parseObject(decrypt, Password.class);
+                password.setId(ct.getId());
+                savedPasswordMap.put(ct.getId(), password);
+            }catch (Exception e){
+                LOGGER.error("密码反序列化失败， 密码Id：{}，content: {}", ct.getId(), ct.getContent(), e);
+                throw new ApplicationOperationException("密码反序列化失败！密码Id：" + ct.getId());
+            }
+        });
+
+        cachedPasswords.putAll(savedPasswordMap);
     }
 }
